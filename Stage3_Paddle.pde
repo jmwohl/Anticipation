@@ -88,13 +88,13 @@ boolean buttonDown = false;
 
 void setup() {
   String os=System.getProperty("os.name");
-  println(os);
+  //println(os);
   
   size(displayW, displayH);
   frameRate(frameRate);
   
   String[] ards = Arduino.list();
-  print(ards);
+  //print(ards);
   
   // for Mac
   // arduino = new Arduino(this, ards[ards.length - 1], 57600);
@@ -106,9 +106,9 @@ void setup() {
   /*
   String[] cameras = Capture.list();
   
-  println("Available cameras:");
+  //println("Available cameras:");
   for (int i = 0; i < cameras.length; i++) {
-    println(cameras[i]);
+    //println(cameras[i]);
   }
   */
   
@@ -347,7 +347,7 @@ void drawPaddle() {
     targetPos.x = displayW/2;
     targetPos.y = displayH/2;
   }
-  println("targetPos:" + targetPos);
+  //println("targetPos:" + targetPos);
   
   // how much lag to add to the paddle
   int lagDivider = 20;
@@ -413,7 +413,7 @@ void drawAnticipationB() {
   }
   anticipatedPos.set(tP);
   
-  println(anticipatedPos);
+  //println(anticipatedPos);
 }
 
 PVector calculateNextIntersectionPoint(PVector curPos, PVector avgVel) {
