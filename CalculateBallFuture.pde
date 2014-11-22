@@ -9,6 +9,9 @@ Capture cam;
 int camW = 640;
 int camH = 480;
 
+int paddleW = 150;
+int paddleH = 20;
+
 // calculate trajectory based on current frame and how many frames back?
 int frameHistory = 5;
 
@@ -63,8 +66,8 @@ void draw() {
   dst = opencv.getOutput();
   
   contours = opencv.findContours();
-   //<>//
-  image(dst, 0, 0);
+  
+  image(dst, 0, 0); //<>//
 
   // focus on only the biggest contour
   if (contours.size() > 0) {
@@ -95,6 +98,8 @@ void draw() {
     curVel.y = curPos.y - prevPos.y;
     drawVelocity();
   }
+  
+  drawPaddle();
 }
 
 void keyPressed() {
@@ -108,6 +113,17 @@ void drawVelocity() {
   stroke(0, 255, 0);
   line(curPos.x, curPos.y, curPos.x + curVel.x, curPos.y + curVel.y);
 }
+
+// draw the velocity vector
+void drawPaddle() {
+  fill(0,0,255);
+  rect(curPos.x - paddleW/2, height - paddleH*2, paddleW, paddleH);
+}
+
+
+
+
+
 
 PVector calculateCentroid(ArrayList<PVector> points) {
   ArrayList<Float> x = new ArrayList<Float>();
