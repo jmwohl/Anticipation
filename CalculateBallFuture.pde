@@ -14,11 +14,14 @@ int camH = 480;
 int paddleW = 150;
 int paddleH = 20;
 
-// calculate trajectory based on current frame and how many frames back?
-int frameHistory = 30;
+// frame rate
+int frameRate = 30;
 
-// how many frames into the future to project?
-int projection = 10;
+// calculate trajectory based on current frame and how many frames back?
+int frameHistory = 10;
+
+// how many seconds into the future to anticipate?
+float anticipation = 1;
 
 boolean sampling = false;
 ArrayList<PVector> pSamples;
@@ -41,7 +44,7 @@ void setup() {
   //  size(displayWidth, displayHeight);
   size(camW, camH);
   frame.setResizable(true);
-  frameRate(30);
+  frameRate(frameRate);
   
   String[] cameras = Capture.list();
   
@@ -137,7 +140,8 @@ void draw() {
     avgVel.add(v);
   }
   avgVel.div(vSamples.size());
-  drawVelocity();
+//  drawVelocity();
+  drawAnticipation();
   println("Average vel: " + avgVel.toString());
   println("Current vel: " + curVel.toString());
 }
@@ -157,6 +161,17 @@ void keyPressed() {
   if (key == 'i' || key == 'I') {
     invert = !invert;
   }
+  
+  if (keyCode == UP) {
+    if (anticipation < 2) {
+      anticipation += 0.1;
+    }
+  } 
+  if (keyCode == DOWN) {
+    if (anticipation > 0) {
+      anticipation -= 0.1; 
+    }
+  } 
 }
 
 // draw the velocity vector
@@ -167,6 +182,46 @@ void drawVelocity() {
   drawnVel.mult(10);
   line(curPos.x, curPos.y, curPos.x + drawnVel.x, curPos.y + drawnVel.y);
 //  line(curPos.x, curPos.y, curPos.x + curVel.x, curPos.y + curVel.y);
+}
+
+void drawAnticipation() {
+  // temp velocity vector
+  PVector tV = new PVector();
+  tV.set(avgVel);
+  PVector nextP = new PVector();
+  nextP.set(curPos);
+  
+  int numFrames = floor(frameRate * anticipation);
+  
+  for (int i = 0; i < numFrames; i++) {
+    nextP.add(tV);
+  
+    if (nextP.x < 0) {
+      nextP.x = -nextP.x;
+      tV.x = -tV.x;
+    }
+    
+    if (nextP.x > width) {
+      nextP.x = width-(nextP.x-width);
+      tV.x = -tV.x;
+    }
+    
+    if (nextP.y < 0) {
+      nextP.y = -nextP.y;
+      tV.y = -tV.y;
+    }
+    
+    // here we may want to use height - [paddle height], if we want the paddle
+    // to be a little smarter...?
+    if (nextP.y > height) {
+      nextP.y = height-(nextP.y-height);
+      tV.y = -tV.y;
+    }
+    
+    fill(255,255,255,50);
+    ellipse(nextP.x,nextP.y,10,10);
+  }
+  
 }
 
 // draw the velocity vector
