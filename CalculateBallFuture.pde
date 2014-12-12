@@ -22,13 +22,15 @@ int paddleH = 20;
 int frameRate = 30;
 
 // calculate trajectory based on current frame and how many frames back?
-int frameHistory = 10;
+int frameHistory = 6;
 
 // how many seconds into the future to anticipate -- read from analog pin 0
 float anticipation = 1;
 
 // the radious of the future ghosts, set from the bounding box of the contour 
 float ghostRad;
+
+int framesPerGhost = 10;
 
 boolean sampling = false;
 ArrayList<PVector> pSamples;
@@ -237,7 +239,10 @@ void drawAnticipation() {
       tV.y = -tV.y;
     }
     
-    ellipse(nextP.x,nextP.y,ghostRad,ghostRad);
+    if (i % framesPerGhost == 0) {
+      ellipse(nextP.x,nextP.y,ghostRad,ghostRad);      
+    }
+
   }
   
 }
