@@ -1,7 +1,11 @@
 import com.jonwohl.*;
 import gab.opencv.*;
 import processing.video.*;
+import processing.serial.*;
+import cc.arduino.*;
+import java.awt.Rectangle;
 
+Arduino arduino;
 Attention attention;
 PImage src, dst, out;
 OpenCV opencv;
@@ -20,8 +24,11 @@ int frameRate = 30;
 // calculate trajectory based on current frame and how many frames back?
 int frameHistory = 10;
 
-// how many seconds into the future to anticipate?
+// how many seconds into the future to anticipate -- read from analog pin 0
 float anticipation = 1;
+
+// the radious of the future ghosts, set from the bounding box of the contour 
+float ghostRad;
 
 boolean sampling = false;
 ArrayList<PVector> pSamples;
@@ -46,6 +53,9 @@ void setup() {
   frame.setResizable(true);
   frameRate(frameRate);
   
+  println(Arduino.list());
+  arduino = new Arduino(this, "/dev/tty.usbmodemfa131", 57600);
+  
   String[] cameras = Capture.list();
   
   println("Available cameras:");
@@ -68,7 +78,9 @@ void setup() {
 }
 
 void draw() {
-
+  anticipation = map(arduino.analogRead(0), 0, 1024, 0, 2);
+  println(anticipation);
+  
   if (cam.available()) { 
     // Reads the new frame
     cam.read();
@@ -98,11 +110,14 @@ void draw() {
     Contour contour = contours.get(0);
     
     ArrayList<PVector> points = contour.getPolygonApproximation().getPoints();
+    Rectangle bb = contour.getBoundingBox();
+    ghostRad = bb.width;
+    
     PVector centroid = calculateCentroid(points);
     
     // draw the centroid, justforthehellavit.
-    fill(255, 0, 0);
-    ellipse(centroid.x, centroid.y, 10, 10);
+//    fill(255, 0, 0);
+//    ellipse(centroid.x, centroid.y, 10, 10);
     
     curPos.set(centroid);
     
@@ -191,6 +206,10 @@ void drawAnticipation() {
   PVector nextP = new PVector();
   nextP.set(curPos);
   
+  
+  fill(255,255,255,20);
+  noStroke();
+  
   int numFrames = floor(frameRate * anticipation);
   
   for (int i = 0; i < numFrames; i++) {
@@ -218,8 +237,7 @@ void drawAnticipation() {
       tV.y = -tV.y;
     }
     
-    fill(255,255,255,50);
-    ellipse(nextP.x,nextP.y,10,10);
+    ellipse(nextP.x,nextP.y,ghostRad,ghostRad);
   }
   
 }
