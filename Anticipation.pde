@@ -90,7 +90,7 @@ void setup() {
 
 void draw() {
   anticipation = map(arduino.analogRead(0), 0, 1024, 0, 2);
-//  println(anticipation);
+  println("anticipation: " + anticipation);
   
   if (cam.available()) { 
     // Reads the new frame
@@ -228,7 +228,7 @@ void drawAnticipation() {
   nextP.set(curPos);
   
   
-  fill(255,255,255,20);
+  fill(255,255,255,50);
   noStroke();
   
   int numFrames = floor(frameRate * anticipation);
@@ -265,7 +265,7 @@ void drawAnticipation() {
   }
   
   anticipatedPos.set(nextP);
-  println(anticipatedPos);
+//  println(anticipatedPos);
   
 }
 
@@ -274,8 +274,8 @@ void drawPaddle() {
   fill(255,255,255,255);
   PVector targetPos = new PVector();
   targetPos.set(anticipatedPos);
-  println("targetPos: " + targetPos);
-  println("curPaddlePos: " + curPaddlePos);
+//  println("targetPos: " + targetPos);
+//  println("curPaddlePos: " + curPaddlePos);
   
   // how much lag to add to the paddle
   int lagDivider = 5;
