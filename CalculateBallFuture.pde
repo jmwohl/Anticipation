@@ -18,35 +18,42 @@ int camH = 480;
 int paddleW = 150;
 int paddleH = 20;
 
-// frame rate
+// draw frame rate
 int frameRate = 30;
 
-// calculate trajectory based on current frame and how many frames back?
-int frameHistory = 6;
 
 // how many seconds into the future to anticipate -- read from analog pin 0
 float anticipation = 1;
 
-// the radious of the future ghosts, set from the bounding box of the contour 
+// the radius of the future ghosts, set from the bounding box of the contour 
 float ghostRad;
 
-int framesPerGhost = 10;
+// how many frames between each future 'ghosted' ball?
+int framesPerGhost = 6;
 
+// Lists to store the position and velocity history -- these are used to calculate current velocity
+// and anticipate future position (based on average velocity)
 boolean sampling = false;
 ArrayList<PVector> pSamples;
 ArrayList<PVector> vSamples;
+// number of frames to sample -- average velocity over this many frames determines future prediction
+int frameHistory = 6;
 
+
+// whether or not to invert the thresholded image -- press 'i' to toggle
 boolean invert = false;
 
-//PVector samples[];
-
-int frameCounter = 0;
-
+// position and velocity of the found contour (the ball)
 PVector curPos = new PVector();
 PVector curVel = new PVector();
 PVector avgVel = new PVector();
-float velMag;
+// the position at the end of the predicted future
+PVector anticipatedPos = new PVector();
 
+// position of the paddle
+PVector curPaddlePos;
+
+// A list of all the contours found by OpenCV
 ArrayList<Contour> contours;
 
 void setup() {
@@ -77,11 +84,13 @@ void setup() {
   out = attention.focus(cam, width, height);
   
   opencv = new OpenCV(this, out);
+  
+  curPaddlePos = new PVector(width/2, height - paddleH - 20);
 }
 
 void draw() {
   anticipation = map(arduino.analogRead(0), 0, 1024, 0, 2);
-  println(anticipation);
+//  println(anticipation);
   
   if (cam.available()) { 
     // Reads the new frame
@@ -123,6 +132,9 @@ void draw() {
     
     curPos.set(centroid);
     
+    // TODO: maybe some flag here, this only needs to happen once
+//    anticipatedPos.set(curPos);
+    
     if (sampling) {
       // add the new position sample
       pSamples.add(0, centroid);
@@ -147,20 +159,24 @@ void draw() {
         if(vSamples.size() > frameHistory) {
           vSamples.remove(vSamples.size() - 1);
         }
+        
+          // calculate average velocity vector
+        avgVel.set(0,0);
+        for (PVector v : vSamples) {
+          avgVel.add(v);
+        }
+        avgVel.div(vSamples.size());
+      
+      //  drawVelocity();
+        drawAnticipation();
+      //  println("Average vel: " + avgVel.toString());
+      //  println("Current vel: " + curVel.toString());
+        
+        drawPaddle();
       }
     }
   }
-  
-  // calculate average velocity vector
-  avgVel.set(0,0);
-  for (PVector v : vSamples) {
-    avgVel.add(v);
-  }
-  avgVel.div(vSamples.size());
-//  drawVelocity();
-  drawAnticipation();
-  println("Average vel: " + avgVel.toString());
-  println("Current vel: " + curVel.toString());
+ 
 }
 
 void keyPressed() {
@@ -179,6 +195,7 @@ void keyPressed() {
     invert = !invert;
   }
   
+  // adjust anticipation -- also hooked up to arduino analog 0
   if (keyCode == UP) {
     if (anticipation < 2) {
       anticipation += 0.1;
@@ -201,6 +218,8 @@ void drawVelocity() {
 //  line(curPos.x, curPos.y, curPos.x + curVel.x, curPos.y + curVel.y);
 }
 
+// draw the Anticipation -- uses the average velocity to draw the future position of the ball
+// every [framesPerGhost] frames up to [anticipation] seconds.
 void drawAnticipation() {
   // temp velocity vector
   PVector tV = new PVector();
@@ -245,12 +264,28 @@ void drawAnticipation() {
 
   }
   
+  anticipatedPos.set(nextP);
+  println(anticipatedPos);
+  
 }
 
-// draw the velocity vector
+// draw the paddle
 void drawPaddle() {
-  fill(0,0,255);
-  rect(curPos.x - paddleW/2, height - paddleH*2, paddleW, paddleH);
+  fill(255,255,255,255);
+  PVector targetPos = new PVector();
+  targetPos.set(anticipatedPos);
+  println("targetPos: " + targetPos);
+  println("curPaddlePos: " + curPaddlePos);
+  
+  // how much lag to add to the paddle
+  int lagDivider = 5;
+  
+  PVector nextPaddlePos = new PVector(curPaddlePos.x + (targetPos.x - curPaddlePos.x)/lagDivider, curPaddlePos.y);
+  
+  rect(nextPaddlePos.x - paddleW/2, height - paddleH*2, paddleW, paddleH);
+  
+  println("nextPaddlePos: " + nextPaddlePos);
+  curPaddlePos.set(nextPaddlePos);
 }
 
 
