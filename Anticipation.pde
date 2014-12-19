@@ -63,7 +63,7 @@ void setup() {
   frameRate(frameRate);
   
   println(Arduino.list());
-  arduino = new Arduino(this, "/dev/tty.usbmodemfa131", 57600);
+//  arduino = new Arduino(this, "/dev/tty.usbmodemfa131", 57600);
   
   String[] cameras = Capture.list();
   
@@ -89,7 +89,7 @@ void setup() {
 }
 
 void draw() {
-  anticipation = map(arduino.analogRead(0), 0, 1024, 0, 2);
+//  anticipation = map(arduino.analogRead(0), 0, 1024, 0, 2);
   println("anticipation: " + anticipation);
   
   if (cam.available()) { 
@@ -99,16 +99,19 @@ void draw() {
   
   // warp the selected region on the input image (cam) to an output image of width x height
   out = attention.focus(cam, width, height);
+  float thresh = map(mouseY, 0, height, 0, 1);
+  out.filter(THRESHOLD, thresh);
+  if (invert) {
+    out.filter(INVERT);
+  }
   
   opencv.loadImage(out);
   
-  opencv.gray();
-  float thresh = map(mouseY, 0, height, 0, 255);
-  opencv.threshold(int(thresh));
-  
-  if (invert) {
-    opencv.invert();
-  }
+//  opencv.gray();
+//  
+//  opencv.threshold(int(thresh));
+//  
+//  
   
   dst = opencv.getOutput();
   
