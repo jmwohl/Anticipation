@@ -6,18 +6,17 @@ import cc.arduino.*;
 import java.awt.Rectangle;
 
 Arduino arduino;
+int buttonPin = 4;
+int potPin = 0;
+
 Attention attention;
 PImage src, dst, out;
 OpenCV opencv;
 
 int displayW = 1024;
-int displayH = 786;
+int displayH = 768;
 
-// points for each corner of the screen, for convenience
-PVector tl = new PVector(0,0);
-PVector tr = new PVector(displayW, 0);
-PVector br = new PVector(displayW, displayH);
-PVector bl = new PVector(0, displayH);
+int ballHeight = 100;
 
 Capture cam;
 int camW = 320;
@@ -27,7 +26,15 @@ int camFR = 30;
 PVector resizeRatio = new PVector(displayW / camW, displayH / camH);
 
 int paddleW = 150;
-int paddleH = 20;
+int paddleH = 30;
+int paddleFloatDist = 20;
+int ballOffset = (paddleFloatDist + paddleH + ballHeight/2);
+
+// points for each corner of the screen, for convenience
+PVector tl = new PVector(0,0);
+PVector tr = new PVector(displayW, 0);
+PVector br = new PVector(displayW, displayH - ballOffset);
+PVector bl = new PVector(0, displayH - ballOffset);
 
 // draw frame rate
 int frameRate = 30;
@@ -47,21 +54,18 @@ int futureBounces = 3;
 
 // Lists to store the position and velocity history -- these are used to calculate current velocity
 // and anticipate future position (based on average velocity)
-boolean sampling = false;
+boolean sampling = true;
 ArrayList<PVector> pSamples;
 ArrayList<PVector> vSamples;
 
 // number of frames to sample -- average velocity over this many frames determines future prediction
-int frameHistory = 30;
+int frameHistory = 5;
+int sampleEvery = 30;
 
 // whether or not to invert the thresholded image -- press 'i' to toggle
 boolean invert = false;
 
-// use arduino?
-boolean useArduino = false;
-
-// arduino is enabled?
-boolean arduinoEnabled = false;
+boolean debug = false;
 
 // position and velocity of the found contour (the ball)
 PVector curPos = new PVector();
@@ -80,6 +84,8 @@ String os;
 // A list of all the contours found by OpenCV
 ArrayList<Contour> contours;
 
+boolean buttonDown = false;
+
 void setup() {
   String os=System.getProperty("os.name");
   println(os);
@@ -87,7 +93,15 @@ void setup() {
   size(displayW, displayH);
   frameRate(frameRate);
   
-  println(Arduino.list());
+  String[] ards = Arduino.list();
+  println(ards);
+  
+  // for Mac
+  arduino = new Arduino(this, ards[ards.length - 1], 57600);
+  
+  // for Odroid
+//  arduino = new Arduino(this, ards[ards.length - 1], 57600);
+  arduino.pinMode(4, Arduino.INPUT);
   
   String[] cameras = Capture.list();
   
@@ -113,24 +127,13 @@ void setup() {
 }
 
 void draw() {
-  if (useArduino && !arduinoEnabled) {
-    try {
-      // mac
-      arduino = new Arduino(this, "/dev/tty.usbmodemfa131", 57600);
-      arduinoEnabled = true;
-    } catch(Exception e) {
-      try {
-        // for Odroid
-        arduino = new Arduino(this, "/dev/ttyACM0", 57600);
-        arduinoEnabled = true;
-      } catch(Exception e2) {
-        // no arduino connected.
-      }  
-    }
-  }
+  background(0);
   
-  if (arduinoEnabled) {
-    anticipation = map(arduino.analogRead(0), 0, 1024, 0, 2);
+  // show attention view on buttonpress
+  if (arduino.digitalRead(buttonPin) == Arduino.HIGH){
+    buttonDown = true; 
+  } else {
+    buttonDown = false;
   }
   
   if (cam.available()) { 
@@ -140,8 +143,8 @@ void draw() {
   
   // warp the selected region on the input image (cam) to an output image of width x height
   out = attention.focus(cam, cam.width, cam.height);
-  float thresh = map(mouseY, 0, height, 0, 1);
-  out.filter(THRESHOLD, thresh);
+  float thresh = map(arduino.analogRead(potPin), 0, 1024, 0, 255);
+  redThreshold(out, thresh);
   if (invert) {
     out.filter(INVERT);
   }
@@ -152,8 +155,9 @@ void draw() {
   
   contours = opencv.findContours();
   
-  image(dst, 0, 0, displayW, displayH); //<>//
-
+  if (debug) {
+    image(dst, 0, 0); //<>//
+  }
   // focus on only the biggest contour
   if (contours.size() > 0) {
     Contour contour = contours.get(0);
@@ -162,10 +166,10 @@ void draw() {
     Rectangle bb = contour.getBoundingBox();
     ghostRad = bb.width;
     
-//    PVector centroid = calculateCentroid(points);
+    PVector centroid = calculateCentroid(points);
 
     // for TESTING ONLY!
-    PVector centroid = new PVector(mouseX, mouseY);
+//    PVector centroid = new PVector(mouseX, mouseY);
     
     // draw the centroid, justforthehellavit.
 //    fill(255, 0, 0);
@@ -178,10 +182,12 @@ void draw() {
     
     if (sampling) {
       // add the new position sample
-      pSamples.add(0, centroid);
-      // limit the size of the samples list
-      if(pSamples.size() > frameHistory) {
-        pSamples.remove(pSamples.size() - 1);
+      if (frameCount % sampleEvery == 0) {
+        pSamples.add(0, centroid);
+        // limit the size of the samples list
+        if(pSamples.size() > frameHistory) {
+          pSamples.remove(pSamples.size() - 1);
+        }
       }
       
       // calculate new velocity
@@ -208,15 +214,13 @@ void draw() {
         }
         avgVel.div(vSamples.size());
       
-      //  drawVelocity();
+        //  drawVelocity();
+        
         drawAnticipationB();
-      //  println("Average vel: " + avgVel.toString());
-      //  println("Current vel: " + curVel.toString());
         
-//        PVector intSec = calculateNextIntersectionPoint(curPos, avgVel);
+        noStroke();
+          
         
-        fill(255, 255, 255);
-//        ellipse(intSec.x, intSec.y, 30, 30);
         
         drawPaddle();
       }
@@ -241,9 +245,8 @@ void keyPressed() {
     invert = !invert;
   }
   
-  // do or don't invert input
-  if (key == 'a' || key == 'A') {
-    useArduino = !useArduino;
+  if (key == 'D' || key == 'd'){
+    debug = !debug;
   }
   
   // adjust anticipation -- also hooked up to arduino analog 0
@@ -268,6 +271,20 @@ void drawVelocity() {
   line(curPos.x, curPos.y, curPos.x + drawnVel.x, curPos.y + drawnVel.y);
 //  line(curPos.x, curPos.y, curPos.x + curVel.x, curPos.y + curVel.y);
 }
+
+void redThreshold(PImage img, float thresh){
+ img.loadPixels();
+ int numPix = 0;
+ for (int i=0; i < img.pixels.length; i++){
+   if (red(img.pixels[i]) > thresh){
+     img.pixels[i] = color(255, 255, 255);
+   } else {
+     img.pixels[i] = color(0,0,0);
+   }
+ }
+ img.updatePixels();
+}
+
 
 // draw the Anticipation -- uses the average velocity to draw the future position of the ball
 // every [framesPerGhost] frames up to [anticipation] seconds.
@@ -331,11 +348,11 @@ void drawPaddle() {
   println("targetPos:" + targetPos);
   
   // how much lag to add to the paddle
-  int lagDivider = 5;
+  int lagDivider = 20;
   
   PVector nextPaddlePos = new PVector(curPaddlePos.x + (targetPos.x - curPaddlePos.x)/lagDivider, curPaddlePos.y);
   
-  rect(nextPaddlePos.x - paddleW/2, height - paddleH*2, paddleW, paddleH);
+  rect(nextPaddlePos.x - paddleW/2, height - paddleFloatDist - paddleH/2, paddleW, paddleH);
   
   curPaddlePos.set(nextPaddlePos);
 }
@@ -366,15 +383,21 @@ float findAverage(ArrayList<Float> vals) {
 
 // draw a number of bounce anticipations ahead based on current velocity
 void drawAnticipationB() {
+  fill(0, 255, 0);
+  stroke(0, 255, 0);
   PVector tP = new PVector();
   PVector tV = new PVector();
-  tP.set(curPos);
+  tP.set(curPos.x*resizeRatio.x, curPos.y*resizeRatio.y);
   tV.set(avgVel);
+  if (buttonDown) {
+    ellipse(tP.x, tP.y, 100, 100);
+  }
   for (int i = 0; i < futureBounces; i++) {
     PVector intSec = calculateNextIntersectionPoint(tP, tV);
-    ellipse(intSec.x, intSec.y, 30, 30);
-    stroke(255,255,255);
-    line(tP.x, tP.y, intSec.x, intSec.y);
+    if (buttonDown) {
+      ellipse(intSec.x, intSec.y, 30, 30);
+      line(tP.x, tP.y, intSec.x, intSec.y);
+    }
     tP.set(intSec);
     if (intSec.y == displayH) {
       break;
@@ -386,13 +409,9 @@ void drawAnticipationB() {
       tV.y = -tV.y;     
     }
   }
+  anticipatedPos.set(tP);
   
-//  anticipatedPos.x = tP.x * resizeRatio.x;
-//  anticipatedPos.y = tP.y * resizeRatio.y;
-
-    anticipatedPos.set(tP);
-    
-    println(anticipatedPos);
+  println(anticipatedPos);
 }
 
 PVector calculateNextIntersectionPoint(PVector curPos, PVector avgVel) {
@@ -401,7 +420,7 @@ PVector calculateNextIntersectionPoint(PVector curPos, PVector avgVel) {
   if(avgVel.x > 0) {
      // going right, check right side
      intSec = findIntersection(curPos, posPlusVel, tr, br);
-     if (intSec.y > displayH) {
+     if (intSec.y > displayH - ballOffset) {
        // will hit the floor, check bottom intersection
        intSec = findIntersection(curPos, posPlusVel, bl, br);
      } else if(intSec.y < 0) {
@@ -412,7 +431,7 @@ PVector calculateNextIntersectionPoint(PVector curPos, PVector avgVel) {
   } else {
     // going left, check left side
     intSec = findIntersection(curPos, posPlusVel, tl, bl);
-    if (intSec.y > displayH) {
+    if (intSec.y > displayH - ballOffset) {
        // will hit the floor, check bottom intersection
        intSec = findIntersection(curPos, posPlusVel, bl, br);
      } else if(intSec.y < 0) {
