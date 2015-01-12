@@ -94,27 +94,29 @@ void setup() {
   frameRate(frameRate);
   
   String[] ards = Arduino.list();
-  println(ards);
+  print(ards);
   
   // for Mac
-  arduino = new Arduino(this, ards[ards.length - 1], 57600);
+  // arduino = new Arduino(this, ards[ards.length - 1], 57600);
   
   // for Odroid
-//  arduino = new Arduino(this, ards[ards.length - 1], 57600);
+  arduino = new Arduino(this, "/dev/ttyACM0", 57600);
   arduino.pinMode(4, Arduino.INPUT);
   
+  /*
   String[] cameras = Capture.list();
   
   println("Available cameras:");
   for (int i = 0; i < cameras.length; i++) {
     println(cameras[i]);
   }
+  */
   
   pSamples = new ArrayList<PVector>();
   vSamples = new ArrayList<PVector>();
   
-  cam = new Capture(this, camW, camH);
-//  cam = new Capture(this, 640, 480, "Sirius USB2.0 Camera", 30);
+  // cam = new Capture(this, camW, camH);
+  cam = new Capture(this, camW, camH, "/dev/video0", 30);
   cam.start();
   
   // instantiate focus passing an initial input image
