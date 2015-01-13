@@ -16,19 +16,21 @@ OpenCV opencv;
 int displayW = 1024;
 int displayH = 768;
 
-int ballHeight = 100;
+int ballHeight = 80;
 
 Capture cam;
 int camW = 320;
 int camH = 240;
 int camFR = 30;
 
+float screenRatio = 1.3333333;
+
 PVector resizeRatio = new PVector(displayW / camW, displayH / camH);
 
 int paddleW = 150;
 int paddleH = 30;
-int paddleFloatDist = 20;
-int ballOffset = (paddleFloatDist + paddleH + ballHeight/2);
+int paddleFloatDist = 60;
+int ballOffset = (paddleFloatDist + paddleH + ballHeight/2 - 30);
 
 // points for each corner of the screen, for convenience
 PVector tl = new PVector(0,0);
@@ -100,7 +102,7 @@ void setup() {
   // arduino = new Arduino(this, ards[ards.length - 1], 57600);
   
   // for Odroid
-  arduino = new Arduino(this, "/dev/ttyACM0", 57600);
+  arduino = new Arduino(this, ards[0], 57600);
   arduino.pinMode(4, Arduino.INPUT);
   
   /*
@@ -116,7 +118,7 @@ void setup() {
   vSamples = new ArrayList<PVector>();
   
   // cam = new Capture(this, camW, camH);
-  cam = new Capture(this, camW, camH, "/dev/video0", 30);
+  cam = new Capture(this, camW, camH, "/dev/video1", 30);
   cam.start();
   
   // instantiate focus passing an initial input image
@@ -130,7 +132,7 @@ void setup() {
 
 void draw() {
   background(0);
-  
+  noCursor();
   // show attention view on buttonpress
   if (arduino.digitalRead(buttonPin) == Arduino.HIGH){
     buttonDown = true; 
@@ -392,12 +394,12 @@ void drawAnticipationB() {
   tP.set(curPos.x*resizeRatio.x, curPos.y*resizeRatio.y);
   tV.set(avgVel);
   if (buttonDown) {
-    ellipse(tP.x, tP.y, 100, 100);
+    ellipse(tP.x, tP.y, ballHeight, ballHeight*screenRatio);
   }
   for (int i = 0; i < futureBounces; i++) {
     PVector intSec = calculateNextIntersectionPoint(tP, tV);
     if (buttonDown) {
-      ellipse(intSec.x, intSec.y, 30, 30);
+      ellipse(intSec.x, intSec.y, 30, 30*screenRatio);
       line(tP.x, tP.y, intSec.x, intSec.y);
     }
     tP.set(intSec);
