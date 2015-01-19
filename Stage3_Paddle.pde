@@ -103,6 +103,8 @@ void setup() {
   
   // for Odroid
   arduino = new Arduino(this, ards[0], 57600);
+//  arduino = new Arduino(this, "/dev/ttyACM1", 57600);
+//  arduino = new Arduino(this, ards[0], 57600);
   arduino.pinMode(4, Arduino.INPUT);
   
   /*
@@ -118,7 +120,13 @@ void setup() {
   vSamples = new ArrayList<PVector>();
   
   // cam = new Capture(this, camW, camH);
-  cam = new Capture(this, camW, camH, "/dev/video1", 30);
+  try {
+    cam = new Capture(this, camW, camH, "/dev/video0", 30);
+  } catch(Exception e) {
+    cam = new Capture(this, camW, camH, "/dev/video1", 30);
+  }
+  
+//  cam = new Capture(this, camW, camH, "/dev/video1", 30);
   cam.start();
   
   // instantiate focus passing an initial input image
@@ -132,7 +140,7 @@ void setup() {
 
 void draw() {
   background(0);
-  noCursor();
+  //noCursor();
   // show attention view on buttonpress
   if (arduino.digitalRead(buttonPin) == Arduino.HIGH){
     buttonDown = true; 
