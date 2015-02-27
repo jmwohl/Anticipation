@@ -2,10 +2,10 @@ import com.jonwohl.*;
 import gab.opencv.*;
 import processing.video.*;
 import processing.serial.*;
-import cc.arduino.*;
+//import cc.arduino.*;
 import java.awt.Rectangle;
 
-Arduino arduino;
+//Arduino arduino;
 int buttonPin = 4;
 int potPin = 0;
 
@@ -23,7 +23,7 @@ int camW = 320;
 int camH = 240;
 int camFR = 30;
 
-float screenRatio = 1.3333333;
+float screenRatio = 1;
 
 PVector resizeRatio = new PVector(displayW / camW, displayH / camH);
 
@@ -95,17 +95,17 @@ void setup() {
   size(displayW, displayH);
   frameRate(frameRate);
   
-  String[] ards = Arduino.list();
+//  String[] ards = Arduino.list();
   //print(ards);
   
   // for Mac
   // arduino = new Arduino(this, ards[ards.length - 1], 57600);
   
   // for Odroid
-  arduino = new Arduino(this, ards[0], 57600);
+//  arduino = new Arduino(this, ards[0], 57600);
 //  arduino = new Arduino(this, "/dev/ttyACM1", 57600);
 //  arduino = new Arduino(this, ards[0], 57600);
-  arduino.pinMode(4, Arduino.INPUT);
+//  arduino.pinMode(4, Arduino.INPUT);
   
   /*
   String[] cameras = Capture.list();
@@ -119,14 +119,12 @@ void setup() {
   pSamples = new ArrayList<PVector>();
   vSamples = new ArrayList<PVector>();
   
-  // cam = new Capture(this, camW, camH);
+//  cam = new Capture(this, camW, camH);
   try {
     cam = new Capture(this, camW, camH, "/dev/video0", 30);
   } catch(Exception e) {
     cam = new Capture(this, camW, camH, "/dev/video1", 30);
   }
-  
-//  cam = new Capture(this, camW, camH, "/dev/video1", 30);
   cam.start();
   
   // instantiate focus passing an initial input image
@@ -142,11 +140,11 @@ void draw() {
   background(0);
   //noCursor();
   // show attention view on buttonpress
-  if (arduino.digitalRead(buttonPin) == Arduino.HIGH){
-    buttonDown = true; 
-  } else {
-    buttonDown = false;
-  }
+//  if (arduino.digitalRead(buttonPin) == Arduino.HIGH){
+//    buttonDown = true; 
+//  } else {
+//    buttonDown = false;
+//  }
   
   if (cam.available()) { 
     // Reads the new frame
@@ -155,7 +153,7 @@ void draw() {
   
   // warp the selected region on the input image (cam) to an output image of width x height
   out = attention.focus(cam, cam.width, cam.height);
-  float thresh = map(arduino.analogRead(potPin), 0, 1024, 0, 255);
+  float thresh = map(mouseY, 0, 768, 0, 255);
   redThreshold(out, thresh);
   if (invert) {
     out.filter(INVERT);
@@ -261,17 +259,10 @@ void keyPressed() {
     debug = !debug;
   }
   
-  // adjust anticipation -- also hooked up to arduino analog 0
-  if (keyCode == UP) {
-    if (anticipation < 2) {
-      anticipation += 0.1;
-    }
-  } 
-  if (keyCode == DOWN) {
-    if (anticipation > 0) {
-      anticipation -= 0.1; 
-    }
-  } 
+  if (key == 'B' || key == 'b'){
+    buttonDown = !buttonDown;
+  }
+
 }
 
 // draw the velocity vector
